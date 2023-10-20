@@ -1,10 +1,13 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2757
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+This is a work in progress.
 
-\f0\fs24 \cf0 This is a work in progress. \
-\
-The aim of the project is to provide solutions to linear optimization problems using the simplex algorithm, only using NumPy to do so. }# WIP-SimplexAlgorithm
+The aim of the project is to provide solutions to linear optimization problems using the simplex algorithm, only using NumPy to do so.
+
+----------------------------------------------------------------------
+? Why not use linear algebra libraries ? 
+-> This is a practice project and the point is to write the Simplex algorithm from scratch
+
+? Why are most methods private ?
+-> The user has no need to access any other method than the one to solve the problem
+
+? Will this be updated ? 
+-> If my way of writing this algorithm works, more functionalities will eventually be added
