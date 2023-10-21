@@ -1,4 +1,4 @@
-# importing the necessary libraries, in this case NumPy for its arrays
+# import the necessary libraries, in this case NumPy for its arrays
 import numpy as np
 
 # creating a class which can instantiate objects
