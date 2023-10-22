@@ -7,6 +7,7 @@ class SimplexTools():
     obj_fnc = [0.0] # starts with a 0 to account for the constant in the constraints while tranforming problem to dictionary format
     constraints = [] # empty list of constraints, used to create a system of equations later on
     dictionaries = [] # list of dictionaries, essentially what every other method operates on and modifies
+    exit_new_coords = []
     def __init__(self, n, m): # will potentially add an option to have the problem as a minimization or a maximization problem
         self.var_count = n # number of variables to the problem
         self.constr_count = m # number of bounds to the problem
@@ -39,7 +40,7 @@ class SimplexTools():
                 constr_rhs = float(input(f"RHS of constraint #{i + 1} = "))
             except ValueError:
                 print("Invalid input, only floats and integers are accepted")
-                self._formulate_problem # trying recursion, don't know if necessary at all
+                self._formulate_problem() # trying recursion, don't know if necessary at all
             constraint_m[0] = constr_rhs # appends the RHS of the constraint to the same list
             constraint_m = np.array(constraint_m)
             self.constraints.append(constraint_m) # appends the list (which is now constraint coeffs + RHS) to a list of constraints
@@ -48,7 +49,8 @@ class SimplexTools():
     def _to_dict(self):
         """Converts the objective function and relevant constraints into a dictionary"""
         A = np.vstack((self.obj_fnc, self.constraints)) # more efficient than appending and resizing
-        slack_vector = np.vstack(("Z_", np.ones((self.constr_count, 1)))) # same as above, Z can be anything
+        Z_ = 0
+        slack_vector = np.vstack((Z_, np.ones((self.constr_count, 1)))) # same as above, Z can be anything
         empty_slack_pivot_matrix = np.zeros((self.constr_count + 1, self.constr_count)) # empty matrix to append to the dictionary
         dictionary = np.hstack((slack_vector, A, empty_slack_pivot_matrix)) # creates the dictionary
         self.dictionaries.append(dictionary)
@@ -68,7 +70,7 @@ class SimplexTools():
     def _pivot(self):
         """Identifies the column and row to pivot for which a variable will enter the basis"""
         # setting up the basic parameters of the function
-        pivot_iteration = 1 # general pivot iteration, only used for descriptive statistics at the end
+        pivot_iteration = 0 # general pivot iteration, only used for descriptive statistics at the end
         dictionary = self.dictionaries[0] # fetches the problem as transformed by "_formulate_problem()"
         print(dictionary) # debug, works as intented
         
@@ -81,13 +83,15 @@ class SimplexTools():
 
         # find the variable with highest coeff in obj function
         pivot_col_index = np.argmax(dictionary[0, 1:]) + 1 # Z column is excluded, add 1
-        pivot_col = dictionary[1:, pivot_col_index].astype(np.float64)
+        pivot_col_no_obj = dictionary[1:, pivot_col_index].astype(np.float64)
+        pivot_col = dictionary[:, pivot_col_index].astype(np.float64)
 
         # determine the variables which enter/leave the basis
         RHS_col = dictionary[1:, 1].astype(np.float64)
         try:
-            ratio = pivot_col / RHS_col
+            ratio = pivot_col_no_obj / RHS_col
             pivot_row_index = np.argmin(ratio) + 1
+            pivot_row = dictionary[pivot_row_index, :]
         except ZeroDivisionError:
             pass
         entering_var = dictionary[pivot_row_index, pivot_col_index] # + 1 account for obj function
@@ -99,14 +103,40 @@ class SimplexTools():
         exiting_var_coord = pivot_row_index, 0 # tuple of 2 coordinates
         print(exiting_var_coord) # debug
         iteration_tracker_index = str(exiting_var_coord[0] - 1)
-        print(iteration_tracker_index) # debug 
+        print(iteration_tracker_index) # debug
 
-        # assigning the coordinates ij of entering and exiting variables after the pivot
+        # appends coordinates ij of entering variable to a list
+        self.exit_new_coords.append(entering_var_coord)
+
+        # assign the coordinates ij of entering and exiting variables after the pivot
         if iteration_tracker.get(iteration_tracker_index) == 1: # checks if the iteration of the pivot row is 1
-            exiting_var_coord_after_pivot = pivot_row_index, (2 + self.var_count + pivot_row_index)
+            exiting_var_coord_after_pivot = pivot_row_index, (1 + self.var_count + pivot_row_index)
             print(exiting_var_coord_after_pivot) # debug
         else:
-            exiting_var_coord_after_pivot = entering_var_coord # no, this will not work as expected, it needs to be entering_var_coord(iteration-1) somehow
+            exiting_var_coord_after_pivot = self.exit_new_coords[0] # entering var goes back to correct place
+
+        # exiting variable pivots out of the basis
+        dictionary[exiting_var_coord_after_pivot] = -exiting_var # change coefficient sign
+        dictionary[exiting_var_coord] = 0.0 # 0 assigned to where exiting var was pre pivot
+        print(dictionary) # debug
+
+        # multiplication ratio by which to add pivot row to other rows (incl obj row)
+        pivot_col_no_entering_var = [i for i in pivot_col if i != entering_var] # excl entering_var
+        mult_ratio = entering_var / pivot_col_no_entering_var
+        print(mult_ratio) # works here still
+        print("this is fine")
+
+        # get rid of instances of entering variable in other rows (problematic fix asap)
+        for row in range(0, self.constr_count):
+            if np.all(dictionary[row, :] != pivot_row):
+                dictionary[row, :] = dictionary[row, :] - (mult_ratio[row] * pivot_row)
+        print(dictionary)
+        print("this works")
+
+        # entering variable pivots into the basis
+        dictionary[exiting_var_coord] = -entering_var # change signs
+        dictionary[entering_var_coord] = 0.0
+        print(dictionary)
 
     def solve(self):
         """Solves an LP maximization problem and gives optimal solutions to the problem"""
