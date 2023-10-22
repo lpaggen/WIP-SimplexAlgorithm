@@ -122,14 +122,25 @@ class SimplexTools():
 
         # multiplication ratio by which to add pivot row to other rows (incl obj row)
         pivot_col_no_entering_var = [i for i in pivot_col if i != entering_var] # excl entering_var
-        mult_ratio = entering_var / pivot_col_no_entering_var
+        mult_ratio = pivot_col_no_entering_var / entering_var
         print(mult_ratio) # works here still
         print("this is fine")
 
-        # get rid of instances of entering variable in other rows (problematic fix asap)
-        for row in range(0, self.constr_count):
-            if np.all(dictionary[row, :] != pivot_row):
-                dictionary[row, :] = dictionary[row, :] - (mult_ratio[row] * pivot_row)
+        # get rid of instances of entering variable in other rows
+        print(pivot_row) # debug
+        tolerance = 1e-10 # small tolerance for comparing floats
+        mult_ratio_index = 0
+        for row in range(0, self.constr_count + 1):
+            print("entering loop")
+            print(dictionary[row, :])
+            row_to_modify = np.all(np.isclose(dictionary[row, :], pivot_row, atol = tolerance))
+            print(row_to_modify)
+            if not row_to_modify:
+                print("working until now")
+                dictionary[row, :] = dictionary[row, :] - (mult_ratio[mult_ratio_index] * pivot_row)
+                mult_ratio_index = (mult_ratio_index + 1) % len(mult_ratio)
+            else:
+                pass
         print(dictionary)
         print("this works")
 
