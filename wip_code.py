@@ -7,7 +7,7 @@ class SimplexTools():
     obj_fnc = [0.0] # starts with a 0 to account for the constant in the constraints while tranforming problem to dictionary format
     constraints = [] # empty list of constraints, used to create a system of equations later on
     dictionaries = [] # list of dictionaries, essentially what every other method operates on and modifies
-    pivot_iteration = 0 # keeps track of how the pivot iteration
+    pivot_iteration = 0 # keeps track of iterations at a certain point t
     iter_tracker = {}
     prev_enter_coordinates = {}
 
@@ -19,7 +19,7 @@ class SimplexTools():
         for i in range(0, self.constr_count): # starts at 0, indexing similar to normal list
             constr = f"{i}" # makes future statements easier, rather than using some complex naming
             self.iter_tracker[constr] = 1 # sets the value of each constraint iteration count to 1
-            self.prev_enter_coordinates[constr] = 0
+            self.prev_enter_coordinates[constr] = {}
 
     # implementing a way to store the information of a LP problem (vaiables, constraints)
     def _formulate_problem(self): # n variables, m constraints
@@ -113,16 +113,19 @@ class SimplexTools():
         #     prev_enter_coordinates[constr] = 0
 
         # coordinates of entering var before pivot (tuple) get stored in dictionary
+        iteration_index = str(self.pivot_iteration)
         constr_index = str(entering_var_coord[0] - 1)
-        self.prev_enter_coordinates[constr_index] = entering_var_coord
+        new_subdictionary = {iteration_index: entering_var_coord}
+        self.prev_enter_coordinates[constr_index].update(new_subdictionary)
 
         # assign the coordinates ij of entering and exiting variables after the pivot
         if self.iter_tracker.get(iteration_tracker_index) == 1: # checks if the iteration of the pivot row is 1
             exiting_var_coord_after_pivot = pivot_row_index, (int(iteration_tracker_index) + self.var_count + 2) #temporary
             print(f"exiting var goes to -> {exiting_var_coord_after_pivot}") # debug
             self.iter_tracker[iteration_tracker_index] += 1 # increment pivot iter by 1
+            print("this works")
         else:
-            exiting_var_coord_after_pivot = self.prev_enter_coordinates[constr_index] # entering var goes back to correct place
+            exiting_var_coord_after_pivot = self.prev_enter_coordinates[constr_index][iteration_index] # FIX: iteration_index
             print(f"all entering var positions -> {self.prev_enter_coordinates}")
             print(f"exiting var goes to -> {exiting_var_coord_after_pivot}")
 
@@ -136,7 +139,7 @@ class SimplexTools():
             if i != pivot_row_index:
                 coords = i, pivot_col_index
                 pivot_col_no_enter_var_coords.append(coords)
-        print(f"pivot row no entervar -> {pivot_col_no_enter_var_coords}")
+        print(f"pivot row no enter var -> {pivot_col_no_enter_var_coords}")
         pivot_col_no_enter_var = [dictionary[i] for i in pivot_col_no_enter_var_coords]
         mult_ratio = pivot_col_no_enter_var / entering_var
         print(f"Multiplication Ratio -> {mult_ratio}")
