@@ -8,8 +8,9 @@ class SimplexTools():
     constraints = [] # empty list of constraints, used to create a system of equations later on
     dictionaries = [] # list of dictionaries, essentially what every other method operates on and modifies
     pivot_iteration = 0 # keeps track of iterations at a certain point t
-    iter_tracker = {}
-    prev_enter_coordinates = {}
+    iter_tracker = {} # dictionary tracking iterations per constraint
+    enter_coord_dict = {}
+    prev_enter_coordinates = [] # sublist
 
     def __init__(self, n, m): # will potentially add an option to have the problem as a minimization or a maximization problem
         self.var_count = n # number of variables to the problem
@@ -19,7 +20,7 @@ class SimplexTools():
         for i in range(0, self.constr_count): # starts at 0, indexing similar to normal list
             constr = f"{i}" # makes future statements easier, rather than using some complex naming
             self.iter_tracker[constr] = 1 # sets the value of each constraint iteration count to 1
-            self.prev_enter_coordinates[constr] = {}
+            self.enter_coord_dict[constr] = []
 
     # implementing a way to store the information of a LP problem (vaiables, constraints)
     def _formulate_problem(self): # n variables, m constraints
@@ -58,8 +59,7 @@ class SimplexTools():
     def _to_dict(self):
         """Converts the objective function and relevant constraints into a dictionary"""
         A = np.vstack((self.obj_fnc, self.constraints)) # more efficient than appending and resizing
-        Z_ = 0
-        slack_vector = np.vstack((Z_, np.ones((self.constr_count, 1)))) # same as above, Z can be anything
+        slack_vector = np.vstack((0, np.ones((self.constr_count, 1)))) # same as above, Z can be anything
         empty_slack_pivot_matrix = np.zeros((self.constr_count + 1, self.constr_count)) # empty matrix to append to the dictionary
         dictionary = np.hstack((slack_vector, A, empty_slack_pivot_matrix)) # creates the dictionary
         self.dictionaries.append(dictionary)
@@ -106,17 +106,9 @@ class SimplexTools():
         iteration_tracker_index = str(exiting_var_coord[0] - 1)
         print(iteration_tracker_index) # debug
 
-        # dictionary of entering_var coordinates
-        # prev_enter_coordinates = {}
-        # for i in range(0, self.constr_count): # starts at 0, indexing similar to normal lists etc
-        #     constr = f"{i}" # makes future statements easier, rather than using some complex naming
-        #     prev_enter_coordinates[constr] = 0
-
-        # coordinates of entering var before pivot (tuple) get stored in dictionary
-        iteration_index = str(self.pivot_iteration)
+        # coordinates of entering var before pivot get stored in dictionary
         constr_index = str(entering_var_coord[0] - 1)
-        new_subdictionary = {iteration_index: entering_var_coord}
-        self.prev_enter_coordinates[constr_index].update(new_subdictionary)
+        self.enter_coord_dict[constr_index].append(entering_var_coord)
 
         # assign the coordinates ij of entering and exiting variables after the pivot
         if self.iter_tracker.get(iteration_tracker_index) == 1: # checks if the iteration of the pivot row is 1
@@ -125,7 +117,8 @@ class SimplexTools():
             self.iter_tracker[iteration_tracker_index] += 1 # increment pivot iter by 1
             print("this works")
         else:
-            exiting_var_coord_after_pivot = self.prev_enter_coordinates[constr_index][iteration_index] # FIX: iteration_index
+            exiting_var_coord_after_pivot = self.enter_coord_dict[constr_index][0] # FIX: iteration_index
+            self.enter_coord_dict[constr_index].pop(0) # remove index 0, only need 2 elements at iter t
             print(f"all entering var positions -> {self.prev_enter_coordinates}")
             print(f"exiting var goes to -> {exiting_var_coord_after_pivot}")
 
