@@ -4,23 +4,26 @@ import numpy as np
 # creating a class which can instantiate objects
 class SimplexTools():
     """Class containing optimization-problem solving algorithms"""
-    obj_fnc = [0.0] # starts with a 0 to account for the constant in the constraints while tranforming problem to dictionary format
-    constraints = [] # empty list of constraints, used to create a system of equations later on
-    dictionaries = [] # list of dictionaries, essentially what every other method operates on and modifies
-    pivot_iteration = 0 # keeps track of iterations at a certain point t
-    iter_tracker = {} # dictionary tracking iterations per constraint
-    enter_coord_dict = {}
-    prev_enter_coordinates = [] # sublist
 
     def __init__(self, n, m): # will potentially add an option to have the problem as a minimization or a maximization problem
         self.var_count = n # number of variables to the problem
         self.constr_count = m # number of bounds to the problem
+        self.obj_fnc = [0.0] # 0 to account for the constant in the constraints while tranforming problem to dictionary format
+        self.constraints = [] # empty list of constraints, used to create a system of equations later on
+        self.dictionaries = [] # list of dictionaries, essentially what every other method operates on and modifies
+        self.pivot_iteration = 0 # keeps track of iterations at a certain point t
+        self.iter_tracker = {} # dictionary tracking iterations per constraint
+        self.enter_coord_dict = {}
+        self.prev_enter_coordinates = [] # sublist
+        self.basis_var = {}
+        self.var_indicators = ["bss", "cst"] # basis, constant
 
-        # dict to keep track of iterations PER constraint
+        # dict to keep track of iterations PER constraint and positions of basis variables
         for i in range(0, self.constr_count): # starts at 0, indexing similar to normal list
             constr = f"{i}" # makes future statements easier, rather than using some complex naming
             self.iter_tracker[constr] = 1 # sets the value of each constraint iteration count to 1
             self.enter_coord_dict[constr] = []
+            self.basis_var[constr] = []
 
     # implementing a way to store the information of a LP problem (vaiables, constraints)
     def _formulate_problem(self): # n variables, m constraints
@@ -63,18 +66,6 @@ class SimplexTools():
         empty_slack_pivot_matrix = np.zeros((self.constr_count + 1, self.constr_count)) # empty matrix to append to the dictionary
         dictionary = np.hstack((slack_vector, A, empty_slack_pivot_matrix)) # creates the dictionary
         self.dictionaries.append(dictionary)
-
-    # def display_dict(self):
-    #     """returns the dictionary of the relevant problem"""
-    #     var_indicators = ["Z/W"]
-    #     for i in range(0, self.var_count):
-    #         var_indicators.append(f"X_{i}")
-    #     for i in range(0, self.constr_count):
-    #         var_indicators.append(f"W_{i + 1}")
-    #     var_indicators = np.array(var_indicators)
-    #     for i in SimplexTools.dictionaries:
-    #         SimplexTools.dictionaries[i] = np.vstack((var_indicators, SimplexTools.dictionaries[i]))
-    #     return "yes?"
 
     def _pivot(self):
         """Identifies the column and row to pivot for which a variable will enter the basis"""
@@ -155,12 +146,23 @@ class SimplexTools():
         dictionary[pivot_row_index, :] = dictionary[pivot_row_index, :] / dictionary[exiting_var_coord]
         print("\nAfter pivoting:\n")
         print(dictionary)
+        
+        # TO DO: identify which variable is in the basis!!!!!!
 
         # update the dictionary in the class list
         self.dictionaries[0] = dictionary
 
         # increment pivot by 1
         self.pivot_iteration += 1
+        
+    def _display_dict(self):
+        """returns the dictionary of the relevant problem"""
+        for i in range(0, self.var_count):
+            self.var_indicators.append(f"X_{i}")
+        for i in range(0, self.constr_count):
+            self.var_indicators.append(f"W_{i + 1}")
+        var_indicators = np.array(self.var_indicators)
+        self.dictionaries[0] = np.vstack((var_indicators, self.dictionaries[0]))
 
 def solve(n, m):
     """
@@ -173,13 +175,10 @@ def solve(n, m):
     problem._formulate_problem()
     problem._to_dict()
     tableau = problem.dictionaries[0]
-    print("solve tableau")
-    print(tableau)
     obj_fnc = tableau[0, 2:]
-    print(obj_fnc)
-    print("yes yes yes yes yes")
     while np.any(obj_fnc > 0):
         problem._pivot()
+    problem._display_dict()
     print(tableau)
     print("problem solved")
 
