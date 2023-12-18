@@ -5,11 +5,13 @@ import numpy as np
 class SimplexTools():
     """Class containing optimization-problem solving algorithms"""
 
-    def __init__(self, n, m): # will potentially add an option to have the problem as a minimization or a maximization problem
+    def __init__(self, obj, constraint_list, n, m): # trying something new
+        self.obj = obj
+        self.constraint_list = constraint_list
         self.var_count = n # number of variables to the problem
         self.constr_count = m # number of bounds to the problem
         self.obj_fnc = [0.0] # 0 to account for the constant in the constraints while tranforming problem to dictionary format
-        self.constraints = [] # empty list of constraints, used to create a system of equations later on
+        self.constraints = [] # list of constraints, used to create a system of equations later on
         self.dictionaries = [] # list of dictionaries, essentially what every other method operates on and modifies
         self.pivot_iteration = 0 # keeps track of iterations at a certain point t
         self.iter_tracker = {} # dictionary tracking iterations per constraint
@@ -27,51 +29,34 @@ class SimplexTools():
 
     # implementing a way to store the information of a LP problem (vaiables, constraints)
     def _formulate_problem(self): # n variables, m constraints
-        """Takes n, m as arguments: n = variables, m = constraints"""
+        """creates usable constraints from user input in solve function"""
+        # create objective function
+        print("creating obj")
+        self.obj_fnc = [0] + self.obj[0:]
+        self.obj_fnc = np.array(self.obj_fnc).astype(np.float64)
         
-        # creating the objective function of an LP problem
-        for i in range(0, self.var_count): # ranges from 0 to the number of variables in the problem
-            try:
-                obj_coeff = float(input(f"OBJECTIVE FUNCTION -> Coefficient of X_{i} = ")) # assigning n coefficients to n variables
-            except ValueError:
-                print("invalid input, only floats and integers are accepted")
-            self.obj_fnc.append(obj_coeff) # appends each coefficient to later convert to an array
-            
-        # creating each constraint of the LP problem
-        for i in range(0, self.constr_count): # determines how many constraints to create
-            constraint_m = ["RHS"] # named constraint_m to represent the "M'th" constraint of the problem
-            j = 1
-            while j < self.var_count + 1:
-                try:
-                    constr_coeff = -float(input(f"CONSTRAINT_{i + 1} -> Coefficient of X_{j - 1} = ")) # assigning n coefficients to n variables
-                except ValueError:
-                    print("Invalid input, only floats and integers are accepted")
-                    self._formulate_problem() # trying recursion, don't know if necessary at all
-                constraint_m.append(constr_coeff) # appends each constraint coefficient to a list
-                j += 1 # incrementing j to n + 1, at which point we exit this loop
-            try: # exited the loop, no need for "else" statement
-                constr_rhs = float(input(f"RHS of constraint #{i + 1} = "))
-            except ValueError:
-                print("Invalid input, only floats and integers are accepted")
-                self._formulate_problem() # trying recursion, don't know if necessary at all
-            constraint_m[0] = constr_rhs # appends the RHS of the constraint to the same list
-            constraint_m = np.array(constraint_m)
-            self.constraints.append(constraint_m) # appends the list (which is now constraint coeffs + RHS) to a list of constraints
-        self.obj_fnc = np.array(self.obj_fnc) # turns list (objective function) into an array
+        # create constraints
+        print("creating cst")
+        for constraint in self.constraint_list:
+            cst = [constraint[-1]] + [-i for i in constraint if i != constraint[-1]] # individual constraint is a list
+            self.constraints.append(cst)
+
+        # debugging purposes
+        print(self.obj_fnc)
+        print(self.constraints)
 
     def _to_dict(self):
         """Converts the objective function and relevant constraints into a dictionary"""
         A = np.vstack((self.obj_fnc, self.constraints)) # more efficient than appending and resizing
         slack_vector = np.vstack((0, np.ones((self.constr_count, 1)))) # same as above, Z can be anything
         empty_slack_pivot_matrix = np.zeros((self.constr_count + 1, self.constr_count)) # empty matrix to append to the dictionary
-        dictionary = np.hstack((slack_vector, A, empty_slack_pivot_matrix)) # creates the dictionary
+        dictionary = np.hstack((slack_vector, A, empty_slack_pivot_matrix)) # finalizes the dictionary
         self.dictionaries.append(dictionary)
 
     def _pivot(self):
         """Identifies the column and row to pivot for which a variable will enter the basis"""
         # setting up the basic parameters of the function
         dictionary = self.dictionaries[0] # fetches the problem as transformed by "_formulate_problem()"
-        print(dictionary) # debug, works as intented
 
         # find the variable with highest coeff in obj function
         pivot_col_index = np.argmax(dictionary[0, 2:]) + 2 # Z AND optimal value excl.
@@ -86,7 +71,7 @@ class SimplexTools():
             pivot_row = dictionary[pivot_row_index, :]
         except ZeroDivisionError:
             pass
-        entering_var = dictionary[pivot_row_index, pivot_col_index] # + 1 account for obj function
+        entering_var = dictionary[pivot_row_index, pivot_col_index]
         exiting_var = dictionary[pivot_row_index, 0]
 
         # finding the coordinates ij of entering and exiting variables before the pivot
@@ -155,6 +140,9 @@ class SimplexTools():
         # increment pivot by 1
         self.pivot_iteration += 1
         
+        # test
+        print(self.iter_tracker)
+        
     def _display_dict(self):
         """returns the dictionary of the relevant problem"""
         for i in range(0, self.var_count):
@@ -163,15 +151,23 @@ class SimplexTools():
             self.var_indicators.append(f"W_{i + 1}")
         var_indicators = np.array(self.var_indicators)
         self.dictionaries[0] = np.vstack((var_indicators, self.dictionaries[0]))
+        
+        # TO DO
+        # SOLVE FOR OPTIMAL VALUES OF EQUATIONS (solve for non basic = 0)
+        # have to save dictionary of iteration -1 in order to do this 
+        # in dictionary t-1, need to set all non basic = 0
+        # solve for all basics, report in final solution
 
-def solve(n, m):
+def solve(obj, constraints):
     """
-    Returns the solutions to an LP maximization problem
+    Returns the solved dictionary of an LP maximization problem
     
     Parameters: n = number of variables in the problem
                 m = number of constraints in the problem
     """
-    problem = SimplexTools(n, m)
+    m = len(constraints)
+    n = len(constraints[0]) - 1
+    problem = SimplexTools(obj, constraints, n, m)
     problem._formulate_problem()
     problem._to_dict()
     tableau = problem.dictionaries[0]
@@ -181,12 +177,3 @@ def solve(n, m):
     problem._display_dict()
     print(tableau)
     print("problem solved")
-
-def main(n,m):
-    simplex = SimplexTools(n,m)
-    simplex._formulate_problem()
-    simplex._to_dict()
-    simplex._pivot()
-
-if __name__ == "__main__":
-    main(2,3)
