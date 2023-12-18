@@ -160,10 +160,32 @@ class SimplexTools():
 
 def solve(obj, constraints):
     """
-    Returns the solved dictionary of an LP maximization problem
+    Takes a Linear Programming (LP) maximization problem and returns its optimal dictionary.
+
+    Parameters:
+    - obj: List or array representing the coefficients of the objective function.
+    - constraints: List or array containing the constraints of the LP problem.
+
+    Returns:
+    A dictionary containing the solved values for the variables in the objective function, 
+    maximizing the given objective function within the specified constraints.
     
-    Parameters: n = number of variables in the problem
-                m = number of constraints in the problem
+    Examples:
+    >>> # Define an objective function and constraints
+    >>> objective_function = [3, 4, 5]  # Objective function: 3x + 4y + 5z
+    >>> problem_constraints = [
+    >>>     [1, 2, 4, 5],  # Constraint 1: x + 2y <= 5
+    >>>     [4, -1, -3, 8],  # Constraint 2: 4x - y -3z <= 8
+    >>>     [2, 0, 1, 3],  # Constraint 3: 2x + z <= 3
+    >>> ]
+
+    >>> # Solve the LP problem
+    >>> solution = solve(objective_function, problem_constraints)
+    >>> print(solution)
+    [[ 0.   11.5   0.    0.   -3.5  -2.    0.   -0.5 ]
+     [ 1.    1.75  0.    0.   -1.75 -0.5   0.    0.25]
+     [ 1.    3.75  0.    0.    3.25 -0.5   0.    2.25]
+     [ 1.    1.5   0.    0.   -0.5   0.    0.   -0.5 ]]
     """
     m = len(constraints)
     n = len(constraints[0]) - 1
